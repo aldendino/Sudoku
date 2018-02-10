@@ -62,12 +62,12 @@ export class SudokuSquare extends Square {
 }
 
 function validStateDataCheck (range, data) {
-  if (!(range.length === data.length)) {
+  if (!(data.length === range)) {
     throw new Error('Number of rows must equal the range.')
   }
   if (data
     .map(row => row.length === range)
-    .filter(isEqual => isEqual)
+    .filter(isEqual => !isEqual)
     .length !== 0
   ) {
     throw new Error('Number of elements in each column must equal the range.')
@@ -79,14 +79,56 @@ function validStateDataCheck (range, data) {
   })
 }
 
+function map2D (data, functor) {
+  return data.map(row => {
+    return row.map(value => {
+      return functor(value)
+    })
+  })
+}
+
+function createArray2D (range) {
+  const array = new Array(range)
+  for (let index = 0; index < array.length; index++) {
+    array[index] = new Array(range)
+  }
+  return array
+}
+
+function translateCoords (range, {row, column}) {
+  const splitDim = Math.sqrt(range)
+  const outerRow = Math.floor(row / splitDim)
+  const outerColumn = Math.floor(column / splitDim)
+  const innerRow = row % splitDim
+  const innerColumn = column % splitDim
+  return {
+    outerRow,
+    outerColumn,
+    innerRow,
+    innerColumn
+  }
+}
+
+function collateSuperSquares (range, data) {
+  const superSquares = createArray2D(range)
+  const superSquareDim = Math.sqrt(range)
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i]
+    for (let j = 0; j < row.length; j++) {
+      const value = row[j]
+      const coords = translateCoords(range, {row: i, column: j})
+      const outerIndex = coords.outerRow * superSquareDim + coords.outerColumn
+      const innerIndex = coords.innerRow * superSquareDim + coords.innerColumn
+      superSquares[outerIndex][innerIndex] = value
+    }
+  }
+  return superSquares
+}
+
 function processStateData (range, data) {
   validStateDataCheck(range, data)
 
-  return data.map(row => {
-    return row.map(value => {
-      return new Square(range, value)
-    })
-  })
+  return map2D(data, (value) => new Square(range, value))
 }
 
 class SquareBoard {
@@ -98,9 +140,17 @@ class SquareBoard {
     // }
 
     let _range = range
-    let _state = processStateData(state)
+    let _state = processStateData(range, state)
     this.getRange = () => _range
     this.getState = () => _state
+  }
+
+  getStateValues () {
+    return map2D(this.getState(), (value) => value.getValue())
+  }
+
+  getStateValuesCollated () {
+    return collateSuperSquares(this.getRange(), this.getStateValues())
   }
 
   setIndex (row, column, value) {
