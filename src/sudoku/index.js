@@ -324,7 +324,7 @@ class SquareBoard {
         rowValues,
         columnValues,
         squareValues
-      ])
+      ].map(array => array.filter(element => element !== 0)))
       const options = this.possibilities.filter(possibility => {
         return !possibilities[possibility]
       })

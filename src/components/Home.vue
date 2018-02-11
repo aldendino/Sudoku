@@ -19,9 +19,7 @@
       </div>
     </div>
     <div class="hud">
-      {{ '[' + currentPossibilities.join(', ') + '] => [' }}
-      <span class="answer">{{ currentOptions.join(', ') }}</span>
-      {{ ']' }}
+      {{ '[' + currentPossibilities.join(', ') + '] => [' }}<span class="answer">{{ currentOptions.join(', ') }}</span>{{ ']' }}
     </div>
   </div>
 </template>
