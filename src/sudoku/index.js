@@ -1,3 +1,4 @@
+import { partial } from 'lodash/function'
 
 const SUDOKU_RANGE = 9
 
@@ -40,6 +41,9 @@ class Square {
 
     let _range = range
     let _value = value
+    let _original = value !== 0
+
+    this.isOriginal = () => _original
 
     this.getRange = () => _range
 
@@ -95,34 +99,169 @@ function createArray2D (range) {
   return array
 }
 
-function translateCoords (range, {row, column}) {
-  const splitDim = Math.sqrt(range)
-  const outerRow = Math.floor(row / splitDim)
-  const outerColumn = Math.floor(column / splitDim)
-  const innerRow = row % splitDim
-  const innerColumn = column % splitDim
-  return {
-    outerRow,
-    outerColumn,
-    innerRow,
-    innerColumn
-  }
+function generateSet (arrays) {
+  const set = {}
+  arrays.forEach(array => {
+    array.forEach(element => {
+      set[element] = element
+    })
+  })
+  return set
 }
 
-function collateSuperSquares (range, data) {
-  const superSquares = createArray2D(range)
-  const superSquareDim = Math.sqrt(range)
+// function translateCoords (range, { row, column }) {
+//   const splitDim = Math.sqrt(range)
+//   const outerRow = Math.floor(row / splitDim)
+//   const outerColumn = Math.floor(column / splitDim)
+//   const innerRow = row % splitDim
+//   const innerColumn = column % splitDim
+//   return {
+//     outerRow,
+//     outerColumn,
+//     innerRow,
+//     innerColumn
+//   }
+// }
+
+/*
+or = floor(r / ssr)
+oc = floor(c / ssr)
+ir = r % ssr
+ic = c % ssr
+ss = or * ssr + oc
+s = ir * ssr + ic
+
+ss = floor(r / ssr) * ssr + floor(c / ssr)
+s = (r % ssr) * ssr + (c % ssr)
+*/
+function collateCoords (range, { row, column }) {
+  const superSquareRange = Math.sqrt(range)
+  const outerRow = Math.floor(row / superSquareRange)
+  const outerColumn = Math.floor(column / superSquareRange)
+  const innerRow = row % superSquareRange
+  const innerColumn = column % superSquareRange
+  return {
+    superSquare: outerRow * superSquareRange + outerColumn,
+    square: innerRow * superSquareRange + innerColumn
+  }
+}
+export const collateSudokuCoords = partial(collateCoords, SUDOKU_RANGE)
+
+/*
+or = floor(ss / ssr)
+oc = ss % ssr
+ir = floor(s / ssr)
+ic = s % ssr
+r = or * ssr + ir
+c = oc * ssr + ic
+
+ss = floor(r / ssr) * ssr + floor(c / ssr)
+s = (r % ssr) * ssr + (c % ssr)
+*/
+function decollateCoords (range, { superSquare, square }) {
+  const superSquareRange = Math.sqrt(range)
+  const outerRow = Math.floor(superSquare / superSquareRange)
+  const outerColumn = superSquare % superSquareRange
+  const innerRow = Math.floor(square / superSquareRange)
+  const innerColumn = square % superSquareRange
+  return {
+    row: outerRow * superSquareRange + innerRow,
+    column: outerColumn * superSquareRange + innerColumn
+  }
+}
+export const decollateSudokuCoords = partial(decollateCoords, SUDOKU_RANGE)
+
+function transposeArray2D (range, data) {
+  const transposedArray2D = createArray2D(range)
   for (let i = 0; i < data.length; i++) {
     const row = data[i]
     for (let j = 0; j < row.length; j++) {
       const value = row[j]
-      const coords = translateCoords(range, {row: i, column: j})
-      const outerIndex = coords.outerRow * superSquareDim + coords.outerColumn
-      const innerIndex = coords.innerRow * superSquareDim + coords.innerColumn
+      transposedArray2D[j][i] = value
+    }
+  }
+  return transposedArray2D
+}
+
+// function getCoordsInRow (range, row, column) {
+//   const coords = []
+//   for (let index = 0; index < range; index++) {
+//     if (index !== column) {
+//       coords.push({
+//         row,
+//         column: index
+//       })
+//     }
+//   }
+//   return coords
+// }
+
+// function getCoordsInColumn (range, row, column) {
+//   const coords = []
+//   for (let index = 0; index < range; index++) {
+//     if (index !== row) {
+//       coords.push({
+//         row: index,
+//         column
+//       })
+//     }
+//   }
+//   return coords
+// }
+
+function getCoordsInSquare (range, row, column) {
+  const collated = collateCoords(range, { row, column })
+  const coords = []
+  for (let index = 0; index < range; index++) {
+    if (index !== collated.square) {
+      coords.push(decollateCoords(range, {
+        superSquare: collated.superSquare,
+        square: index
+      }))
+    }
+  }
+  return coords
+}
+
+// function getRelativeCoords (range, row, column) {
+//   const rowCoords = getCoordsInRow(range, row, column)
+//   const columnCoords = getCoordsInColumn(range, row, column)
+//   const squareCoords = getCoordsInSquare(range, row, column)
+
+//   const coordsSet = {}
+//   const coordsArray = [
+//     ...rowCoords,
+//     ...columnCoords,
+//     ...squareCoords
+//   ]
+//   coordsArray.forEach(coord => {
+//     coordsSet[`${coord.row}:${coord.column}`] = coord
+//   })
+//   return Object.values(coordsSet)
+// }
+
+function collateSuperSquares (range, data) {
+  const superSquares = createArray2D(range)
+  // const superSquareDim = Math.sqrt(range)
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i]
+    for (let j = 0; j < row.length; j++) {
+      const value = row[j]
+      // const coords = translateCoords(range, {row: i, column: j})
+      // const outerIndex = coords.outerRow * superSquareDim + coords.outerColumn
+      // const innerIndex = coords.innerRow * superSquareDim + coords.innerColumn
+      const coords = collateCoords(range, { row: i, column: j })
+      const outerIndex = coords.superSquare
+      const innerIndex = coords.square
       superSquares[outerIndex][innerIndex] = value
     }
   }
   return superSquares
+}
+
+export function collateSudoku (state) {
+  // const data = map2D(state, (value) => value.getValue())
+  return collateSuperSquares(SUDOKU_RANGE, state)
 }
 
 function processStateData (range, data) {
@@ -143,10 +282,21 @@ class SquareBoard {
     let _state = processStateData(range, state)
     this.getRange = () => _range
     this.getState = () => _state
+    this.stateValues = map2D(_state, (value) => value.getValue())
+
+    this.possibilities = [...Array(range + 1).keys()].slice(1)
   }
 
   getStateValues () {
     return map2D(this.getState(), (value) => value.getValue())
+  }
+
+  getStateOriginality () {
+    return map2D(this.getState(), (value) => value.isOriginal())
+  }
+
+  getStateValuesTransposed () {
+    return transposeArray2D(this.getRange(), this.getStateValues())
   }
 
   getStateValuesCollated () {
@@ -158,6 +308,46 @@ class SquareBoard {
     valueInRangeCheck(this.getRange(), column)
 
     this.getState()[row][column].setValue(value)
+    this.stateValues = map2D(this.getState(), (value) => value.getValue())
+  }
+
+  getPossibleValuesHelper (row, column) {
+    const stateValues = this.getStateValues()
+    if (stateValues[row][column] !== 0) return []
+    else {
+      const rowValues = stateValues[row]
+      const columnValues = this.getStateValuesTransposed()[column]
+      const collatedCoords = collateSudokuCoords({row, column})
+      const squareValues = this.getStateValuesCollated()[collatedCoords.superSquare]
+
+      const possibilities = generateSet([
+        rowValues,
+        columnValues,
+        squareValues
+      ])
+      const options = this.possibilities.filter(possibility => {
+        return !possibilities[possibility]
+      })
+      return options
+    }
+  }
+
+  getPossibleValues (row, column) {
+    const singleOptions = this.getPossibleValuesHelper(row, column)
+
+    const relativeCoords = getCoordsInSquare(this.getRange(), row, column)
+    const relativeOptions = relativeCoords.map(coord => {
+      return this.getPossibleValuesHelper(coord.row, coord.column)
+    })
+
+    const possibilities = generateSet(relativeOptions)
+
+    // if (Object.values(possibilities).length !== this.getRange() - 1) return []
+
+    const options = singleOptions.filter(option => {
+      return !possibilities[option]
+    })
+    return options
   }
 }
 
