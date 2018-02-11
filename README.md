@@ -1,6 +1,8 @@
 # sudoku
 
-> A Vue.js project
+> A Sudoku Solver in Vue.js
+
+[Demo](https://aldendino.github.io/Sudoku/)
 
 ## Build Setup
 
