@@ -5,7 +5,7 @@
         {{ square !== 0 ? square : ' ' }}
       </div>
     </div> -->
-    <div class="sudoku-board sudoku-grid">
+    <div class="sudoku-board sudoku-grid" @mouseout="currentSquare = null">
       <div class="sudoku-grid" v-for="(grid, i) in stateCollated" :key="i">
         <div class="sudoku-square" v-for="(square, j) in grid" :key="j"
           @click="handleClick({ superSquare: i, square: j })"
@@ -19,7 +19,9 @@
       </div>
     </div>
     <div class="hud">
-      {{ currentOptions.join(', ') }}
+      {{ '[' + currentPossibilities.join(', ') + '] => [' }}
+      <span class="answer">{{ currentOptions.join(', ') }}</span>
+      {{ ']' }}
     </div>
   </div>
 </template>
@@ -57,6 +59,10 @@ export default {
     currentCoords () {
       if (this.currentSquare == null) return null
       else return decollateSudokuCoords(this.currentSquare)
+    },
+    currentPossibilities () {
+      if (this.currentCoords == null) return []
+      else return this.board.getPossibleValuesHelper(this.currentCoords.row, this.currentCoords.column)
     },
     currentOptions () {
       if (this.currentCoords == null) return []
@@ -153,6 +159,14 @@ export default {
   top 100%
   left 50%
   transform translate(-50%, -100%)
+  padding 10px
+  box-sizing border-box
+  border-radius 10px 10px 0 0
+  background red
+  color pink
+  font-size 25px
+  .answer
+    color white
 
 // .sudoku-board
 //   display inline-grid

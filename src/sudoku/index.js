@@ -335,6 +335,8 @@ class SquareBoard {
   getPossibleValues (row, column) {
     const singleOptions = this.getPossibleValuesHelper(row, column)
 
+    if (singleOptions.length === 0 || singleOptions.length === 1) return singleOptions
+
     const relativeCoords = getCoordsInSquare(this.getRange(), row, column)
     const relativeOptions = relativeCoords.map(coord => {
       return this.getPossibleValuesHelper(coord.row, coord.column)
