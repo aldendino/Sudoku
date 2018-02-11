@@ -1,6 +1,6 @@
 import { partial } from 'lodash/function'
 
-const SUDOKU_RANGE = 9
+export const SUDOKU_RANGE = 9
 
 function inRange (range, value) {
   return value >= 0 && value <= range

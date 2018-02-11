@@ -5,20 +5,28 @@
         {{ square !== 0 ? square : ' ' }}
       </div>
     </div> -->
+    <div class="hud hud-top hud-controls">
+      <button @click="nextMove">next</button>
+      <div>{{ autoCurrentSquare != null ? autoCurrentSquare.row + ':' + autoCurrentSquare.column : '' }}</div>
+    </div>
     <div class="sudoku-board sudoku-grid" @mouseout="currentSquare = null">
       <div class="sudoku-grid" v-for="(grid, i) in stateCollated" :key="i">
         <div class="sudoku-square" v-for="(square, j) in grid" :key="j"
           @click="handleClick({ superSquare: i, square: j })"
           @mouseover="handleMouseOver({ superSquare: i, square: j })"
-          :class="{ current: isCurrentSquare({ superSquare: i, square: j }),
+          :class="{
+            'current-ai': isCurrentSquareAI({ superSquare: i, square: j }),
+            'relative-ai': isRelativeSquareAI({ superSquare: i, square: j }),
+            current: isCurrentSquare({ superSquare: i, square: j }),
             relative: isRelativeSquare({ superSquare: i, square: j }),
-            original: isOriginalSquare({ superSquare: i, square: j }) }"
+            original: isOriginalSquare({ superSquare: i, square: j })
+          }"
           >
           {{ square !== 0 ? square : ' ' }}
         </div>
       </div>
     </div>
-    <div class="hud">
+    <div class="hud hud-bottom hud-answers">
       {{ '[' + currentPossibilities.join(', ') + '] => [' }}<span class="answer">{{ currentOptions.join(', ') }}</span>{{ ']' }}
     </div>
   </div>
@@ -26,14 +34,15 @@
 
 <script>
 import { puzzle1 } from '@/data'
-import { SudokuBoard, decollateSudokuCoords, collateSudoku } from '@/sudoku'
+import { SudokuBoard, collateSudokuCoords, decollateSudokuCoords, collateSudoku, SUDOKU_RANGE } from '@/sudoku'
 import { flatten } from 'lodash/array'
 
 export default {
   data () {
     return {
       board: new SudokuBoard(puzzle1.puzzle),
-      currentSquare: null
+      currentSquare: null,
+      autoCurrentSquare: null
     }
   },
   computed: {
@@ -65,6 +74,20 @@ export default {
     currentOptions () {
       if (this.currentCoords == null) return []
       else return this.board.getPossibleValues(this.currentCoords.row, this.currentCoords.column)
+    },
+    nextAutoSquare () {
+      if (this.autoCurrentSquare == null) return { row: 0, column: 0 }
+      else {
+        let row = this.autoCurrentSquare.row
+        const column = (this.autoCurrentSquare.column + 1) % SUDOKU_RANGE
+        if (column === 0) {
+          row = (this.autoCurrentSquare.row + 1) % SUDOKU_RANGE
+        }
+        return {
+          row,
+          column
+        }
+      }
     }
   },
   methods: {
@@ -90,6 +113,15 @@ export default {
           currentCoords.column === coords.column
       }
     },
+    isCurrentSquareAI (superSquareCoords) {
+      if (this.autoCurrentSquare == null) return false
+      else {
+        const currentCoords = this.autoCurrentSquare // decollateSudokuCoords(this.autoCurrentSquare)
+        const coords = decollateSudokuCoords(superSquareCoords)
+        return currentCoords.row === coords.row &&
+          currentCoords.column === coords.column
+      }
+    },
     isRelativeSquare (superSquareCoords) {
       if (this.currentSquare == null) return false
       else {
@@ -102,12 +134,40 @@ export default {
           currentCoords.column === coords.column)
       }
     },
+    isRelativeSquareAI (superSquareCoords) {
+      if (this.autoCurrentSquare == null) return false
+      else {
+        const currentCoords = this.autoCurrentSquare // decollateSudokuCoords(this.autoCurrentSquare)
+        const collatedCoords = collateSudokuCoords(this.autoCurrentSquare)
+        const coords = decollateSudokuCoords(superSquareCoords)
+        return (collatedCoords.superSquare === superSquareCoords.superSquare ||
+          currentCoords.row === coords.row ||
+          currentCoords.column === coords.column) &&
+          !(currentCoords.row === coords.row &&
+          currentCoords.column === coords.column)
+      }
+    },
     isOriginalSquare (superSquareCoords) {
       const coords = decollateSudokuCoords(superSquareCoords)
       return this.originality[coords.row][coords.column]
     },
     handleMouseOver (superSquareCoords) {
       this.setCurrentSquare(superSquareCoords)
+    },
+    nextMove () {
+      this.autoCurrentSquare = this.nextAutoSquare
+      // if (this.autoCurrentSquare == null) this.autoCurrentSquare = { row: 0, column: 0 }
+      // else {
+      //   let row = this.autoCurrentSquare.row
+      //   const column = (this.autoCurrentSquare.column + 1) % SUDOKU_RANGE
+      //   if (column === 0) {
+      //     row = (this.autoCurrentSquare.row + 1) % SUDOKU_RANGE
+      //   }
+      //   this.autoCurrentSquare = {
+      //     row,
+      //     column
+      //   }
+      // }
     }
   }
 }
@@ -152,21 +212,51 @@ export default {
     color blue
     &.current
       color lightblue
+  &.current-ai
+    background green
+    color white
+  &.relative-ai
+    background lightgreen
+  &.original
+    &.current-ai
+      color lightgreen
 
 .hud
   position absolute
-  top 100%
-  left 50%
-  transform translate(-50%, -100%)
   padding 10px
   box-sizing border-box
+
+.hud-bottom
+  bottom 0
+  left 50%
+  transform translateX(-50%)
   border-radius 10px 10px 0 0
+
+.hud-answers
   background red
   color pink
   font-size 25px
   .answer
     font-weight bold
     color white
+
+.hud-top
+  top 0
+  left 50%
+  transform translateX(-50%)
+  border-radius 0 0 10px 10px
+
+.hud-controls
+  background lightblue
+  color blue
+  font-size 25px
+  button
+    background blue
+    color white
+    font-size inherit
+    border-radius 4px
+    &:hover
+      background darkblue
 
 // .sudoku-board
 //   display inline-grid
