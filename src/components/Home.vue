@@ -100,7 +100,7 @@ export default {
     },
     isOriginalSquare (superSquareCoords) {
       const coords = decollateSudokuCoords(superSquareCoords)
-      this.originality[coords.row][coords.column]
+      return this.originality[coords.row][coords.column]
     },
     handleMouseOver (superSquareCoords) {
       this.setCurrentSquare(superSquareCoords)
@@ -144,7 +144,9 @@ export default {
   &.relative
     background lightblue
   &.original
-    color grey
+    color blue
+    &.current
+      color lightblue
 
 .hud
   position absolute
