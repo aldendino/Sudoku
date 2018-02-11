@@ -148,6 +148,7 @@ export default {
   &.relative
     background lightblue
   &.original
+    font-weight bold
     color blue
     &.current
       color lightblue
@@ -164,6 +165,7 @@ export default {
   color pink
   font-size 25px
   .answer
+    font-weight bold
     color white
 
 // .sudoku-board
