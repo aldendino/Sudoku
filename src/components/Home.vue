@@ -6,8 +6,12 @@
       </div>
     </div> -->
     <div class="hud hud-top hud-controls">
-      <button @click="nextMove">next</button>
-      <div>{{ autoCurrentSquare != null ? autoCurrentSquare.row + ':' + autoCurrentSquare.column : '' }}</div>
+      <button @click="nextMove">manual</button>
+      <button @click="startNextMoveAuto">start</button>
+      <button @click="stopNextMoveAuto">stop</button>
+      <button @click="resetBoard">reset</button>
+      <input type="range" :min="minInterval" :max="maxInterval" :step="intervalStep" v-model="interval"/>
+      <div>{{ currentSquareAuto != null ? currentSquareAuto.row + ':' + currentSquareAuto.column : '' }}</div>
     </div>
     <div class="sudoku-board sudoku-grid" @mouseout="currentSquare = null">
       <div class="sudoku-grid" v-for="(grid, i) in stateCollated" :key="i">
@@ -15,8 +19,8 @@
           @click="handleClick({ superSquare: i, square: j })"
           @mouseover="handleMouseOver({ superSquare: i, square: j })"
           :class="{
-            'current-ai': isCurrentSquareAI({ superSquare: i, square: j }),
-            'relative-ai': isRelativeSquareAI({ superSquare: i, square: j }),
+            'current-auto': isCurrentSquareAuto({ superSquare: i, square: j }),
+            'relative-auto': isRelativeSquareAuto({ superSquare: i, square: j }),
             current: isCurrentSquare({ superSquare: i, square: j }),
             relative: isRelativeSquare({ superSquare: i, square: j }),
             original: isOriginalSquare({ superSquare: i, square: j })
@@ -42,7 +46,12 @@ export default {
     return {
       board: new SudokuBoard(puzzle1.puzzle),
       currentSquare: null,
-      autoCurrentSquare: null
+      currentSquareAuto: null,
+      auto: false,
+      interval: 100,
+      minInterval: 0,
+      maxInterval: 1000,
+      intervalStep: 25
     }
   },
   computed: {
@@ -75,19 +84,38 @@ export default {
       if (this.currentCoords == null) return []
       else return this.board.getPossibleValues(this.currentCoords.row, this.currentCoords.column)
     },
+    currentCoordsAuto () {
+      if (this.currentSquareAuto == null) return null
+      else return this.currentSquareAuto
+    },
+    currentPossibilitiesAuto () {
+      if (this.currentCoordsAuto == null) return []
+      else return this.board.getPossibleValuesHelper(this.currentCoordsAuto.row, this.currentCoordsAuto.column)
+    },
+    currentOptionsAuto () {
+      if (this.currentCoordsAuto == null) return []
+      else return this.board.getPossibleValues(this.currentCoordsAuto.row, this.currentCoordsAuto.column)
+    },
     nextAutoSquare () {
-      if (this.autoCurrentSquare == null) return { row: 0, column: 0 }
+      if (this.currentSquareAuto == null) return { row: 0, column: 0 }
       else {
-        let row = this.autoCurrentSquare.row
-        const column = (this.autoCurrentSquare.column + 1) % SUDOKU_RANGE
+        let row = this.currentSquareAuto.row
+        const column = (this.currentSquareAuto.column + 1) % SUDOKU_RANGE
         if (column === 0) {
-          row = (this.autoCurrentSquare.row + 1) % SUDOKU_RANGE
+          row = (this.currentSquareAuto.row + 1) % SUDOKU_RANGE
         }
         return {
           row,
           column
         }
       }
+    },
+    complete () {
+      return this.state.reduce((acc, val) => {
+        return acc && val.reduce((acc, val) => {
+          return acc && val !== 0
+        })
+      })
     }
   },
   methods: {
@@ -98,7 +126,16 @@ export default {
         let column = coords.column
         let value = this.currentOptions[0]
         this.board.setIndex(row, column, value)
-        console.log(`Set: ${row}:${column} = ${value}`)
+        // console.log(`Set: ${row}:${column} = ${value}`)
+      }
+    },
+    handleMoveAuto (coords) {
+      if (this.currentOptionsAuto && this.currentOptionsAuto.length === 1) {
+        let row = coords.row
+        let column = coords.column
+        let value = this.currentOptionsAuto[0]
+        this.board.setIndex(row, column, value)
+        // console.log(`Set: ${row}:${column} = ${value}`)
       }
     },
     setCurrentSquare (superSquareCoords) {
@@ -113,10 +150,10 @@ export default {
           currentCoords.column === coords.column
       }
     },
-    isCurrentSquareAI (superSquareCoords) {
-      if (this.autoCurrentSquare == null) return false
+    isCurrentSquareAuto (superSquareCoords) {
+      if (this.currentSquareAuto == null) return false
       else {
-        const currentCoords = this.autoCurrentSquare // decollateSudokuCoords(this.autoCurrentSquare)
+        const currentCoords = this.currentSquareAuto // decollateSudokuCoords(this.currentSquareAuto)
         const coords = decollateSudokuCoords(superSquareCoords)
         return currentCoords.row === coords.row &&
           currentCoords.column === coords.column
@@ -134,11 +171,11 @@ export default {
           currentCoords.column === coords.column)
       }
     },
-    isRelativeSquareAI (superSquareCoords) {
-      if (this.autoCurrentSquare == null) return false
+    isRelativeSquareAuto (superSquareCoords) {
+      if (this.currentSquareAuto == null) return false
       else {
-        const currentCoords = this.autoCurrentSquare // decollateSudokuCoords(this.autoCurrentSquare)
-        const collatedCoords = collateSudokuCoords(this.autoCurrentSquare)
+        const currentCoords = this.currentSquareAuto // decollateSudokuCoords(this.currentSquareAuto)
+        const collatedCoords = collateSudokuCoords(this.currentSquareAuto)
         const coords = decollateSudokuCoords(superSquareCoords)
         return (collatedCoords.superSquare === superSquareCoords.superSquare ||
           currentCoords.row === coords.row ||
@@ -155,19 +192,40 @@ export default {
       this.setCurrentSquare(superSquareCoords)
     },
     nextMove () {
-      this.autoCurrentSquare = this.nextAutoSquare
-      // if (this.autoCurrentSquare == null) this.autoCurrentSquare = { row: 0, column: 0 }
+      if (this.currentSquareAuto) {
+        this.handleMoveAuto(this.currentSquareAuto)
+      }
+      this.currentSquareAuto = this.nextAutoSquare
+      // if (this.currentSquareAuto == null) this.currentSquareAuto = { row: 0, column: 0 }
       // else {
-      //   let row = this.autoCurrentSquare.row
-      //   const column = (this.autoCurrentSquare.column + 1) % SUDOKU_RANGE
+      //   let row = this.currentSquareAuto.row
+      //   const column = (this.currentSquareAuto.column + 1) % SUDOKU_RANGE
       //   if (column === 0) {
-      //     row = (this.autoCurrentSquare.row + 1) % SUDOKU_RANGE
+      //     row = (this.currentSquareAuto.row + 1) % SUDOKU_RANGE
       //   }
-      //   this.autoCurrentSquare = {
+      //   this.currentSquareAuto = {
       //     row,
       //     column
       //   }
       // }
+    },
+    nextMoveAuto () {
+      if (this.auto && !this.complete) {
+        this.nextMove()
+        setTimeout(this.nextMoveAuto, this.interval)
+      }
+    },
+    startNextMoveAuto () {
+      this.auto = true
+      this.nextMoveAuto()
+    },
+    stopNextMoveAuto () {
+      this.auto = false
+    },
+    resetBoard () {
+      this.auto = false
+      this.currentSquareAuto = null
+      this.board = new SudokuBoard(puzzle1.puzzle)
     }
   }
 }
@@ -212,13 +270,13 @@ export default {
     color blue
     &.current
       color lightblue
-  &.current-ai
+  &.current-auto
     background green
     color white
-  &.relative-ai
+  &.relative-auto
     background lightgreen
   &.original
-    &.current-ai
+    &.current-auto
       color lightgreen
 
 .hud
@@ -250,11 +308,14 @@ export default {
   background lightblue
   color blue
   font-size 25px
+  display flex
+  align-items baseline
   button
     background blue
     color white
     font-size inherit
     border-radius 4px
+    margin 5px
     &:hover
       background darkblue
 
