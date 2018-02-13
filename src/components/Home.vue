@@ -99,18 +99,7 @@ export default {
       else return this.board.getPossibleValues(this.currentCoordsAuto.row, this.currentCoordsAuto.column)
     },
     nextAutoSquare () {
-      if (this.currentSquareAuto == null) return { row: 0, column: 0 }
-      else {
-        let row = this.currentSquareAuto.row
-        const column = (this.currentSquareAuto.column + 1) % SUDOKU_RANGE
-        if (column === 0) {
-          row = (this.currentSquareAuto.row + 1) % SUDOKU_RANGE
-        }
-        return {
-          row,
-          column
-        }
-      }
+      return this.nextSquare(this.currentAutoSquare)
     },
     complete () {
       return this.state.reduce((acc, val) => {
@@ -121,6 +110,20 @@ export default {
     }
   },
   methods: {
+    nextSquare (currentSquare) {
+      if (currentSquare == null) return { row: 0, column: 0 }
+      else {
+        let row = currentSquare.row
+        const column = (currentSquare.column + 1) % SUDOKU_RANGE
+        if (column === 0) {
+          row = (currentSquare.row + 1) % SUDOKU_RANGE
+        }
+        return {
+          row,
+          column
+        }
+      }
+    },
     randomPuzzle (puzzles) {
       return new SudokuBoard(puzzles[Math.floor(Math.random() * puzzles.length)])
     },
@@ -200,7 +203,15 @@ export default {
       if (this.currentSquareAuto) {
         this.handleMoveAuto(this.currentSquareAuto)
       }
-      this.currentSquareAuto = this.nextAutoSquare
+      if (this.currentSquareAuto == null) this.currentSquareAuto = this.nextAutoSquare
+
+      let potentialNextSquare = this.nextSquare(this.currentSquareAuto)
+      while (!(potentialNextSquare.row === this.currentSquareAuto.row &&
+        potentialNextSquare.column === this.currentSquareAuto.column) &&
+        this.getValue(potentialNextSquare) !== 0) {
+        potentialNextSquare = this.nextSquare(potentialNextSquare)
+      }
+      this.currentSquareAuto = potentialNextSquare
       // if (this.currentSquareAuto == null) this.currentSquareAuto = { row: 0, column: 0 }
       // else {
       //   let row = this.currentSquareAuto.row
@@ -213,6 +224,9 @@ export default {
       //     column
       //   }
       // }
+    },
+    getValue (square) {
+      return this.state[square.row][square.column]
     },
     nextMoveAuto () {
       if (this.auto && !this.complete) {
