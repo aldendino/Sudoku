@@ -1,4 +1,9 @@
-import { partial } from 'lodash/function'
+
+function partial (func, ...outerArgs) {
+  return function (...innerArgs) {
+    return func(...[...outerArgs, ...innerArgs])
+  }
+}
 
 export const SUDOKU_RANGE = 9
 
@@ -269,6 +274,30 @@ function processStateData (range, data) {
 
   return map2D(data, (value) => new Square(range, value))
 }
+
+function validSolutionArray (range, array) {
+  const sorted = array.concat.sort()
+  for (let index = range; index > 0; index--) {
+    const element = sorted[index]
+    if (element !== index) return false
+  }
+  return true
+}
+
+function verifySolution (range, state) {
+  const rows = state
+  const columns = transposeArray2D(range, state)
+  const squares = collateSuperSquares(range, state)
+
+  const arrays = [
+    ...rows,
+    ...columns,
+    ...squares
+  ]
+  return arrays.every(partial(validSolutionArray, range))
+}
+
+export const verifySudokuSolution = partial(verifySolution, SUDOKU_RANGE)
 
 class SquareBoard {
   constructor (range = SUDOKU_RANGE, state) {
