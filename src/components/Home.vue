@@ -10,6 +10,7 @@
       <button @click="startNextMoveAuto">start</button>
       <button @click="stopNextMoveAuto">stop</button>
       <button @click="resetBoard">reset</button>
+      <button @click="setRandomBoard">random</button>
       <input type="range" :min="minInterval" :max="maxInterval" :step="intervalStep" v-model="interval"/>
       <div>{{ currentSquareAuto != null ? currentSquareAuto.row + ':' + currentSquareAuto.column : '' }}</div>
     </div>
@@ -37,14 +38,15 @@
 </template>
 
 <script>
-import { puzzle1 } from '@/data'
+import { puzzle1, puzzles } from '@/data'
 import { SudokuBoard, collateSudokuCoords, decollateSudokuCoords, collateSudoku, SUDOKU_RANGE } from '@/sudoku'
 import { flatten } from 'lodash/array'
 
 export default {
   data () {
     return {
-      board: new SudokuBoard(puzzle1.puzzle),
+      puzzles,
+      board: new SudokuBoard(puzzles[0]),
       currentSquare: null,
       currentSquareAuto: null,
       auto: false,
@@ -119,6 +121,9 @@ export default {
     }
   },
   methods: {
+    randomPuzzle (puzzles) {
+      return new SudokuBoard(puzzles[Math.floor(Math.random() * puzzles.length)])
+    },
     handleClick (superSquareCoords) {
       const coords = decollateSudokuCoords(superSquareCoords)
       if (this.currentOptions && this.currentOptions.length === 1) {
@@ -226,6 +231,11 @@ export default {
       this.auto = false
       this.currentSquareAuto = null
       this.board = new SudokuBoard(puzzle1.puzzle)
+    },
+    setRandomBoard () {
+      this.auto = false
+      this.currentSquareAuto = null
+      this.board = this.randomPuzzle(puzzles)
     }
   }
 }
