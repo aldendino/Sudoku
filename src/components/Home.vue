@@ -12,7 +12,10 @@
       <button @click="resetBoard">reset</button>
       <button @click="setRandomBoard">random</button>
       <input type="range" :min="minInterval" :max="maxInterval" :step="intervalStep" v-model="interval"/>
-      <div>{{ currentSquareAuto != null ? currentSquareAuto.row + ':' + currentSquareAuto.column : '' }}</div>
+      <!-- <select v-model="puzzleIndex">
+        <option v-for="(puzzle, index) in puzzles" :key="index" :value="index">{{ index }}</option>
+      </select> -->
+      <!-- <div>{{ currentSquareAuto != null ? currentSquareAuto.row + ':' + currentSquareAuto.column : '' }}</div> -->
     </div>
     <div class="sudoku-board sudoku-grid" @mouseout="currentSquare = null">
       <div class="sudoku-grid" v-for="(grid, i) in stateCollated" :key="i">
@@ -32,13 +35,13 @@
       </div>
     </div>
     <div class="hud hud-bottom hud-answers">
-      {{ '[' + currentPossibilities.join(', ') + '] => [' }}<span class="answer">{{ currentOptions.join(', ') }}</span>{{ ']' }}
+      {{ '[' + hudValues.possibilities.join(', ') + '] => [' }}<span class="answer">{{ hudValues.options.join(', ') }}</span>{{ ']' }}
     </div>
   </div>
 </template>
 
 <script>
-import { puzzle1, puzzles } from '@/data'
+import { puzzles } from '@/data'
 import { SudokuBoard, collateSudokuCoords, decollateSudokuCoords, collateSudoku, SUDOKU_RANGE } from '@/sudoku'
 import { flatten } from 'lodash/array'
 
@@ -46,7 +49,8 @@ export default {
   data () {
     return {
       puzzles,
-      board: new SudokuBoard(puzzles[0]),
+      puzzleIndex: 0,
+      board: new SudokuBoard(puzzles[1]),
       currentSquare: null,
       currentSquareAuto: null,
       auto: false,
@@ -57,6 +61,9 @@ export default {
     }
   },
   computed: {
+    // board () {
+    //   return new SudokuBoard(puzzles[this.puzzleIndex])
+    // },
     state () {
       // return this.board.getStateValues()
       return this.board.stateValues
@@ -101,6 +108,19 @@ export default {
     nextAutoSquare () {
       return this.nextSquare(this.currentAutoSquare)
     },
+    hudValues () {
+      if (this.currentCoords != null) {
+        return {
+          possibilities: this.currentPossibilities,
+          options: this.currentOptions
+        }
+      } else {
+        return {
+          possibilities: this.currentPossibilitiesAuto,
+          options: this.currentOptionsAuto
+        }
+      }
+    },
     complete () {
       return this.state.reduce((acc, val) => {
         return acc && val.reduce((acc, val) => {
@@ -108,6 +128,17 @@ export default {
         })
       })
     }
+  },
+  watch: {
+    // puzzleIndex (value) {
+    //   this.resetBoard()
+    // },
+    // board: {
+    //   immediate: true,
+    //   handler (value) {
+    //     this.state = this.board.stateValues
+    //   }
+    // }
   },
   methods: {
     nextSquare (currentSquare) {
@@ -244,7 +275,7 @@ export default {
     resetBoard () {
       this.auto = false
       this.currentSquareAuto = null
-      this.board = new SudokuBoard(puzzle1.puzzle)
+      this.board.reset()
     },
     setRandomBoard () {
       this.auto = false
@@ -284,6 +315,14 @@ export default {
   align-items center
   box-sizing border-box
   cursor pointer
+  &.current-auto
+    background green
+    color white
+  &.relative-auto
+    background lightgreen
+  &.original
+    &.current-auto
+      color lightgreen
   &.current
     background blue
     color white
@@ -294,14 +333,6 @@ export default {
     color blue
     &.current
       color lightblue
-  &.current-auto
-    background green
-    color white
-  &.relative-auto
-    background lightgreen
-  &.original
-    &.current-auto
-      color lightgreen
 
 .hud
   position absolute

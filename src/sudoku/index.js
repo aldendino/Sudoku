@@ -188,31 +188,31 @@ function transposeArray2D (range, data) {
   return transposedArray2D
 }
 
-// function getCoordsInRow (range, row, column) {
-//   const coords = []
-//   for (let index = 0; index < range; index++) {
-//     if (index !== column) {
-//       coords.push({
-//         row,
-//         column: index
-//       })
-//     }
-//   }
-//   return coords
-// }
+function getCoordsInRow (range, row, column) {
+  const coords = []
+  for (let index = 0; index < range; index++) {
+    if (index !== column) {
+      coords.push({
+        row,
+        column: index
+      })
+    }
+  }
+  return coords
+}
 
-// function getCoordsInColumn (range, row, column) {
-//   const coords = []
-//   for (let index = 0; index < range; index++) {
-//     if (index !== row) {
-//       coords.push({
-//         row: index,
-//         column
-//       })
-//     }
-//   }
-//   return coords
-// }
+function getCoordsInColumn (range, row, column) {
+  const coords = []
+  for (let index = 0; index < range; index++) {
+    if (index !== row) {
+      coords.push({
+        row: index,
+        column
+      })
+    }
+  }
+  return coords
+}
 
 function getCoordsInSquare (range, row, column) {
   const collated = collateCoords(range, { row, column })
@@ -314,6 +314,11 @@ class SquareBoard {
     this.stateValues = map2D(_state, (value) => value.getValue())
 
     this.possibilities = [...Array(range + 1).keys()].slice(1)
+
+    this.reset = () => {
+      _state = processStateData(range, state)
+      this.stateValues = map2D(_state, (value) => value.getValue())
+    }
   }
 
   getStateValues () {
@@ -366,20 +371,34 @@ class SquareBoard {
 
     if (singleOptions.length === 0 || singleOptions.length === 1) return singleOptions
 
-    const relativeCoords = getCoordsInSquare(this.getRange(), row, column)
-    const relativeOptions = relativeCoords.map(coord => {
-      return this.getPossibleValuesHelper(coord.row, coord.column)
-    })
+    const relativeRowCoords = getCoordsInRow(this.getRange(), row, column)
+    const rowOptions = filterPossibilities(this, relativeRowCoords, singleOptions)
+    if (rowOptions.length === 1) return rowOptions
 
-    const possibilities = generateSet(relativeOptions)
+    const relativeColumnCoords = getCoordsInColumn(this.getRange(), row, column)
+    const columnOptions = filterPossibilities(this, relativeColumnCoords, singleOptions)
+    if (columnOptions.length === 1) return columnOptions
+
+    const relativeSquareCoords = getCoordsInSquare(this.getRange(), row, column)
+    const squareOptions = filterPossibilities(this, relativeSquareCoords, singleOptions)
+    if (squareOptions.length === 1) return squareOptions
 
     // if (Object.values(possibilities).length !== this.getRange() - 1) return []
-
-    const options = singleOptions.filter(option => {
-      return !possibilities[option]
-    })
-    return options
+    return []
   }
+}
+
+function filterPossibilities (context, relativeCoords, singleOptions) {
+  const relativeOptions = relativeCoords.map(coord => {
+    return context.getPossibleValuesHelper(coord.row, coord.column)
+  })
+
+  const possibilities = generateSet(relativeOptions)
+
+  const options = singleOptions.filter(option => {
+    return !possibilities[option]
+  })
+  return options
 }
 
 export class SudokuBoard extends SquareBoard {
